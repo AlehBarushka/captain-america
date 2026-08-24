@@ -45,7 +45,7 @@ def main() -> int:
             "Не заданы переменные: "
             + ", ".join(missing)
             + "\nСкопируйте .env.example в .env и заполните ключи "
-            "(или задайте те же имена в GitHub Actions secrets).",
+            "(или задайте те же имена в GitHub Actions secrets/variables).",
             file=sys.stderr,
         )
         return 1
