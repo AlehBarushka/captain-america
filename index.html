@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дифференцированный график платежей по ипотеке (BYN)</title>
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Ипотека">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="boot-screen" class="login-screen">
+        <p class="subtitle">Загрузка…</p>
+    </div>
+
+    <div id="login-screen" class="login-screen" hidden>
+        <div class="login-card">
+            <h1>Вход в график</h1>
+            <p class="subtitle">Семейный ипотечный калькулятор. Войдите, чтобы синхронизировать данные между устройствами.</p>
+            <form id="login-form" class="login-form">
+                <div class="param">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" name="email" required autocomplete="username" inputmode="email">
+                </div>
+                <div class="param">
+                    <label for="login-password">Пароль</label>
+                    <input type="password" id="login-password" name="password" required autocomplete="current-password">
+                </div>
+                <p id="login-error" class="login-error" hidden></p>
+                <button type="submit" id="login-submit" class="btn-primary">Войти</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="app" class="container" hidden>
+        <div class="app-header">
+            <h1>Дифференцированный график платежей по ипотеке</h1>
+            <div class="user-bar" id="user-bar" hidden>
+                <span id="user-email" class="user-email"></span>
+                <button type="button" id="logout-btn" class="btn-logout">Выйти</button>
+            </div>
+        </div>
+        <p class="subtitle">
+            Ставка = ставка рефинансирования + ставка банка (по умолчанию 15,4%).<br>
+            Досрочные платежи уменьшают основной долг, срок кредита не сокращается — оставшийся долг пересчитывается на оставшиеся месяцы.
+            Все суммы указаны в белорусских рублях (BYN).
+            Дата оплаты проставляется автоматически при отметке месяца или вводе дополнительного платежа.
+            Данные синхронизируются между устройствами.
+        </p>
+
+        <div class="params">
+            <div class="param">
+                <label for="amount">Сумма кредита, BYN</label>
+                <input type="number" id="amount" value="300000" min="0" step="1000">
+            </div>
+            <div class="param">
+                <label for="rate">Годовая ставка, %</label>
+                <input type="number" id="rate" value="15.4" min="0" step="0.01">
+            </div>
+            <div class="param">
+                <label for="years">Срок, лет</label>
+                <input type="number" id="years" value="20" min="1" max="50" step="1">
+            </div>
+        </div>
+
+        <div class="summary">
+            <div class="summary-card">
+                <div class="label">Всего выплачено (план)</div>
+                <div class="value" id="sum-total-payment">0 BYN</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Всего процентов (план)</div>
+                <div class="value" id="sum-total-interest">0 BYN</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Всего осн. долга (план)</div>
+                <div class="value" id="sum-total-principal">0 BYN</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Досрочное погашение</div>
+                <div class="value" id="sum-total-extra">0 BYN</div>
+            </div>
+        </div>
+
+        <div class="summary">
+            <div class="summary-card actual">
+                <div class="label">Факт. выплачено</div>
+                <div class="value" id="fact-total-payment">0 BYN</div>
+            </div>
+            <div class="summary-card actual">
+                <div class="label">Факт. проценты</div>
+                <div class="value" id="fact-total-interest">0 BYN</div>
+            </div>
+            <div class="summary-card actual">
+                <div class="label">Факт. осн. долг</div>
+                <div class="value" id="fact-total-principal">0 BYN</div>
+            </div>
+            <div class="summary-card actual">
+                <div class="label">Оплачено месяцев</div>
+                <div class="value" id="paid-months-count">0</div>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-group-1">№</th>
+                        <th class="col-group-date">Дата оплаты</th>
+                        <th class="col-group-2 col-balance-before">Остаток долга до платежа</th>
+                        <th class="col-group-2 col-interest">Проценты</th>
+                        <th class="col-group-2 col-principal-plan">Основной долг (план)</th>
+                        <th class="col-group-2 col-payment-plan">Платёж (план)</th>
+                        <th class="col-group-extra">Доп. платёж</th>
+                        <th class="col-group-3">Итого платёж</th>
+                        <th class="col-group-3 col-total-principal">Итого осн. долг</th>
+                        <th class="col-group-balance">Остаток долга после платежа</th>
+                        <th class="col-group-paid">Оплачен</th>
+                    </tr>
+                </thead>
+                <tbody id="schedule-body"></tbody>
+            </table>
+        </div>
+
+        <p class="text-muted">
+            Нажмите на строку, чтобы увидеть подробный расчёт. В столбце «Доп. платёж» можно указать сумму досрочного погашения для любого месяца.
+            Отметки, дополнительные платежи и даты сохраняются и доступны всем членам семьи.
+        </p>
+    </div>
+
+    <script src="js/firebase-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('./sw.js');
+            });
+        }
+    </script>
+</body>
+</html>
