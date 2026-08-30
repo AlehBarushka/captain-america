@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Дифференцированный график платежей по ипотеке (BYN)</title>
     <meta name="theme-color" content="#2563eb">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -52,84 +52,149 @@
             Данные синхронизируются между устройствами.
         </p>
 
-        <div class="params">
-            <div class="param">
-                <label for="amount">Сумма кредита, BYN</label>
-                <input type="number" id="amount" value="300000" min="0" step="1000">
+        <section class="screen" id="screen-params" data-screen="params">
+            <h2 class="screen-title screen-title-mobile">Параметры</h2>
+            <div class="params">
+                <div class="param">
+                    <label for="amount">Сумма кредита, BYN</label>
+                    <input type="number" id="amount" value="300000" min="0" step="any" inputmode="decimal" autocomplete="off">
+                </div>
+                <div class="param">
+                    <label for="rate">Годовая ставка, %</label>
+                    <input type="number" id="rate" value="15.4" min="0" step="any" inputmode="decimal" autocomplete="off">
+                </div>
+                <div class="param">
+                    <label for="years">Срок, лет</label>
+                    <input type="number" id="years" value="20" step="1" inputmode="numeric" autocomplete="off">
+                </div>
+                <div class="param">
+                    <label for="start-date">Дата старта кредита</label>
+                    <input type="date" id="start-date" autocomplete="off">
+                </div>
             </div>
-            <div class="param">
-                <label for="rate">Годовая ставка, %</label>
-                <input type="number" id="rate" value="15.4" min="0" step="0.01">
-            </div>
-            <div class="param">
-                <label for="years">Срок, лет</label>
-                <input type="number" id="years" value="20" min="1" max="50" step="1">
-            </div>
-        </div>
 
-        <div class="summary">
-            <div class="summary-card">
-                <div class="label">Всего выплачено (план)</div>
-                <div class="value" id="sum-total-payment">0 BYN</div>
+            <div class="summary">
+                <div class="summary-card">
+                    <div class="label">Всего выплачено (план)</div>
+                    <div class="value" id="sum-total-payment">0 BYN</div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">Всего процентов (план)</div>
+                    <div class="value" id="sum-total-interest">0 BYN</div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">Всего осн. долга (план)</div>
+                    <div class="value" id="sum-total-principal">0 BYN</div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">Досрочное погашение</div>
+                    <div class="value" id="sum-total-extra">0 BYN</div>
+                </div>
             </div>
-            <div class="summary-card">
-                <div class="label">Всего процентов (план)</div>
-                <div class="value" id="sum-total-interest">0 BYN</div>
-            </div>
-            <div class="summary-card">
-                <div class="label">Всего осн. долга (план)</div>
-                <div class="value" id="sum-total-principal">0 BYN</div>
-            </div>
-            <div class="summary-card">
-                <div class="label">Досрочное погашение</div>
-                <div class="value" id="sum-total-extra">0 BYN</div>
-            </div>
-        </div>
 
-        <div class="summary">
-            <div class="summary-card actual">
-                <div class="label">Факт. выплачено</div>
-                <div class="value" id="fact-total-payment">0 BYN</div>
+            <div class="summary">
+                <div class="summary-card actual">
+                    <div class="label">Факт. выплачено</div>
+                    <div class="value" id="fact-total-payment">0 BYN</div>
+                </div>
+                <div class="summary-card actual">
+                    <div class="label">Факт. проценты</div>
+                    <div class="value" id="fact-total-interest">0 BYN</div>
+                </div>
+                <div class="summary-card actual">
+                    <div class="label">Факт. осн. долг</div>
+                    <div class="value" id="fact-total-principal">0 BYN</div>
+                </div>
+                <div class="summary-card actual">
+                    <div class="label">Оплачено месяцев</div>
+                    <div class="value" id="paid-months-count">0</div>
+                </div>
             </div>
-            <div class="summary-card actual">
-                <div class="label">Факт. проценты</div>
-                <div class="value" id="fact-total-interest">0 BYN</div>
-            </div>
-            <div class="summary-card actual">
-                <div class="label">Факт. осн. долг</div>
-                <div class="value" id="fact-total-principal">0 BYN</div>
-            </div>
-            <div class="summary-card actual">
-                <div class="label">Оплачено месяцев</div>
-                <div class="value" id="paid-months-count">0</div>
-            </div>
-        </div>
+        </section>
 
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th class="col-group-1">№</th>
-                        <th class="col-group-date">Дата оплаты</th>
-                        <th class="col-group-2 col-balance-before">Остаток долга до платежа</th>
-                        <th class="col-group-2 col-interest">Проценты</th>
-                        <th class="col-group-2 col-principal-plan">Основной долг (план)</th>
-                        <th class="col-group-2 col-payment-plan">Платёж (план)</th>
-                        <th class="col-group-extra">Доп. платёж</th>
-                        <th class="col-group-3">Итого платёж</th>
-                        <th class="col-group-3 col-total-principal">Итого осн. долг</th>
-                        <th class="col-group-balance">Остаток долга после платежа</th>
-                        <th class="col-group-paid">Оплачен</th>
-                    </tr>
-                </thead>
-                <tbody id="schedule-body"></tbody>
-            </table>
-        </div>
+        <section class="screen active" id="screen-pay" data-screen="pay">
+            <h2 class="screen-title">Текущий платёж</h2>
+            <div class="pay-card" id="pay-card">
+                <div id="pay-in-range">
+                    <div class="pay-card-head">
+                        <h3 id="pay-month-label" class="pay-month-label"></h3>
+                        <span id="pay-now-badge" class="pay-now-badge">Этот месяц</span>
+                    </div>
+                    <div class="pay-meta">
+                        <div>
+                            <div class="label">Остаток до платежа</div>
+                            <div class="value" id="pay-balance">—</div>
+                        </div>
+                        <div>
+                            <div class="label">Проценты</div>
+                            <div class="value" id="pay-interest">—</div>
+                        </div>
+                        <div>
+                            <div class="label">Основной долг</div>
+                            <div class="value" id="pay-principal">—</div>
+                        </div>
+                        <div>
+                            <div class="label">Минимум</div>
+                            <div class="value" id="pay-minimum">—</div>
+                        </div>
+                    </div>
+                    <div id="pay-form" class="pay-form">
+                        <div class="param">
+                            <label for="pay-amount">Сумма платежа, BYN</label>
+                            <input type="number" id="pay-amount" min="0" step="any" inputmode="decimal" autocomplete="off">
+                        </div>
+                        <p id="pay-error" class="pay-error" hidden></p>
+                        <button type="button" id="pay-btn" class="btn-primary">Оплатить</button>
+                    </div>
+                    <div id="pay-done" class="pay-done" hidden>
+                        <p class="pay-done-status">Месяц оплачен</p>
+                        <p>Сумма: <strong id="pay-done-amount">—</strong></p>
+                        <p>Дата: <strong id="pay-done-date">—</strong></p>
+                    </div>
+                </div>
+                <div id="pay-empty" class="pay-empty" hidden></div>
+            </div>
+        </section>
 
-        <p class="text-muted">
-            Нажмите на строку, чтобы увидеть подробный расчёт. В столбце «Доп. платёж» можно указать сумму досрочного погашения для любого месяца.
-            Отметки, дополнительные платежи и даты сохраняются и доступны всем членам семьи.
-        </p>
+        <section class="screen" id="screen-schedule" data-screen="schedule">
+            <h2 class="screen-title screen-title-mobile">График</h2>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="col-group-1">Месяц</th>
+                            <th class="col-group-date">Дата оплаты</th>
+                            <th class="col-group-2 col-balance-before">Остаток долга до платежа</th>
+                            <th class="col-group-2 col-interest">Проценты</th>
+                            <th class="col-group-2 col-principal-plan">Основной долг (план)</th>
+                            <th class="col-group-2 col-payment-plan">Платёж (план)</th>
+                            <th class="col-group-extra">Доп. платёж</th>
+                            <th class="col-group-3">Итого платёж</th>
+                            <th class="col-group-3 col-total-principal">Итого осн. долг</th>
+                            <th class="col-group-balance">Остаток долга после платежа</th>
+                            <th class="col-group-paid">Оплачен</th>
+                        </tr>
+                    </thead>
+                    <tbody id="schedule-body"></tbody>
+                </table>
+            </div>
+
+            <div id="schedule-cards" class="schedule-cards"></div>
+
+            <p class="text-muted hint-desktop">
+                В столбце «Доп. платёж» можно указать сумму досрочного погашения для любого месяца.
+                Отметки, дополнительные платежи и даты сохраняются и доступны всем членам семьи.
+            </p>
+            <p class="text-muted hint-mobile">
+                Нажмите на месяц, чтобы увидеть подробности, доп. платёж и отметку «Оплачен».
+            </p>
+        </section>
+
+        <nav class="tabbar" id="tabbar" aria-label="Разделы">
+            <button type="button" class="tabbar-btn active" data-tab="pay" aria-controls="screen-pay" aria-selected="true">Платёж</button>
+            <button type="button" class="tabbar-btn" data-tab="schedule" aria-controls="screen-schedule" aria-selected="false">График</button>
+            <button type="button" class="tabbar-btn" data-tab="params" aria-controls="screen-params" aria-selected="false">Параметры</button>
+        </nav>
     </div>
 
     <script src="js/firebase-config.js"></script>
