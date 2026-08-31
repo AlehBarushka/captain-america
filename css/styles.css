@@ -272,7 +272,10 @@ h1 {
     font-weight: 600;
     color: #111827;
     font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
     word-break: break-word;
+    overflow: visible;
+    line-height: 1.25;
 }
 
 .pay-meta .value {

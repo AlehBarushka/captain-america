@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = 'ipoteka-schedule-' + CACHE_VERSION;
 
 const PRECACHE_URLS = [
@@ -29,6 +29,11 @@ self.addEventListener('activate', (event) => {
 
 function isFirebaseConfig(url) {
   return url.pathname.endsWith('/js/firebase-config.js') || url.pathname.endsWith('firebase-config.js');
+}
+
+function isAppShell(url) {
+  const path = url.pathname;
+  return path === '/' || path.endsWith('/index.html') || path.endsWith('/css/styles.css') || path.endsWith('/sw.js');
 }
 
 async function networkFirst(request) {
@@ -72,7 +77,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (isFirebaseConfig(url)) {
+  if (isFirebaseConfig(url) || isAppShell(url)) {
     event.respondWith(networkFirst(request));
     return;
   }
