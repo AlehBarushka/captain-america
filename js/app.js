@@ -410,6 +410,12 @@ function renderSummary(schedule) {
 }
 
 function renderPayCard(schedule) {
+    if (!isInitialized) {
+        payInRange.hidden = true;
+        payEmpty.hidden = true;
+        return;
+    }
+
     const { rows, currentIndex } = schedule;
     const inRange = currentIndex >= 0 && currentIndex < N;
     payEmpty.hidden = inRange;
@@ -595,9 +601,18 @@ function applySnapshotField(input, incoming, applyValue) {
     applyValue(incoming);
 }
 
-function initFirebaseListener() {
+function initFirebaseListener(onReady) {
+    let settled = false;
+    const ready = () => {
+        if (settled) return;
+        settled = true;
+        if (typeof onReady === 'function') onReady();
+    };
+
     if (!db) {
         isInitialized = true;
+        recalc();
+        ready();
         return;
     }
     teardownSync();
@@ -663,11 +678,15 @@ function initFirebaseListener() {
                 }
             } else {
                 isInitialized = true;
+                recalc();
                 saveToFirebase();
             }
+            ready();
         }, (error) => {
             console.error('Ошибка получения данных из Firebase:', error);
             isInitialized = true;
+            recalc();
+            ready();
         });
 }
 
@@ -841,6 +860,12 @@ function hideBoot() {
     bootScreen.hidden = true;
 }
 
+function showBoot() {
+    bootScreen.hidden = false;
+    loginScreen.hidden = true;
+    appScreen.hidden = true;
+}
+
 function showLogin() {
     hideBoot();
     loginScreen.hidden = false;
@@ -892,19 +917,19 @@ function bindAuthUI() {
 startDateInput.value = startDate;
 buildTable();
 buildCards();
-recalc();
 
 if (!auth) {
-    showApp(null);
     isInitialized = true;
+    recalc();
+    showApp(null);
 } else {
     bindAuthUI();
     auth.onAuthStateChanged((user) => {
         if (user) {
             if (currentUid !== user.uid) {
                 currentUid = user.uid;
-                showApp(user.email || '');
-                initFirebaseListener();
+                showBoot();
+                initFirebaseListener(() => showApp(user.email || ''));
             }
         } else {
             currentUid = null;
