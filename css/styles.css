@@ -204,24 +204,59 @@ h1 {
     background: #fff;
 }
 
+.summary-group {
+    margin-bottom: 1.25rem;
+    padding: 1rem 1.15rem 1.15rem;
+    border-radius: 14px;
+    border: 1px solid;
+}
+
+.summary-group-plan {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+}
+
+.summary-group-actual {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+}
+
+.summary-group-title {
+    margin: 0 0 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.summary-group-plan .summary-group-title {
+    color: #3730a3;
+}
+
+.summary-group-actual .summary-group-title {
+    color: #047857;
+}
+
 .summary {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
 }
 
 .summary-card {
-    background: #f0f4ff;
-    border-radius: 10px;
-    padding: 0.8rem 1.1rem;
-    flex: 1 1 130px;
-    min-width: 120px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 1rem 1.15rem;
+    min-width: 0;
+    border: 1px solid rgba(15, 23, 42, 0.06);
 }
 
-.summary-card.actual {
-    background: #e6f7ff;
-    border: 1px solid #91d5ff;
+.summary-group-plan .summary-card {
+    box-shadow: 0 1px 0 rgba(67, 56, 202, 0.06);
+}
+
+.summary-group-actual .summary-card {
+    box-shadow: 0 1px 0 rgba(4, 120, 87, 0.06);
 }
 
 .summary-card .label,
@@ -232,7 +267,14 @@ h1 {
     letter-spacing: 0.03em;
 }
 
-.summary-card .value,
+.summary-card .value {
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: #111827;
+    font-variant-numeric: tabular-nums;
+    word-break: break-word;
+}
+
 .pay-meta .value {
     font-size: 1.15rem;
     font-weight: 600;
@@ -563,10 +605,12 @@ th.col-group-date { background-color: #f8bbd0; }
     .param label { font-size: 0.7rem; margin-bottom: 0.1rem; }
     .param input { font-size: 16px; padding: 0.4rem 0.5rem; border-radius: 6px; }
 
-    .summary { gap: 0.5rem; margin-bottom: 1rem; }
-    .summary-card { padding: 0.5rem 0.7rem; min-width: 80px; flex: 1 1 80px; border-radius: 8px; }
-    .summary-card .label { font-size: 0.65rem; }
-    .summary-card .value { font-size: 0.95rem; }
+    .summary-group { padding: 0.85rem 0.85rem 0.95rem; margin-bottom: 1rem; border-radius: 12px; }
+    .summary-group-title { font-size: 0.75rem; margin-bottom: 0.7rem; }
+    .summary { grid-template-columns: 1fr; gap: 0.65rem; }
+    .summary-card { padding: 0.9rem 1rem; border-radius: 10px; }
+    .summary-card .label { font-size: 0.7rem; }
+    .summary-card .value { font-size: 1.25rem; }
 
     #app.container {
         padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
