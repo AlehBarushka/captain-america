@@ -128,8 +128,17 @@ function getCurrentMonthIndex(startDateStr) {
     return (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
 }
 
+function toCents(value) {
+    if (!Number.isFinite(value)) return 0;
+    return Math.round(Number((value * 100).toFixed(8)));
+}
+
+function fromCents(cents) {
+    return cents / 100;
+}
+
 function roundMoney(value) {
-    return Math.round(value * 100) / 100;
+    return fromCents(toCents(value));
 }
 
 function parseNonNegNumber(raw) {
@@ -275,77 +284,109 @@ function syncHorizon() {
 }
 
 // ---------- Расчёт графика ----------
-function computeSchedule() {
-    monthlyRate = annualRate / 100 / 12;
+function amortizeLoan(amount, n, ratePercent, extrasList) {
+    const monthlyRate = ratePercent / 100 / 12;
+    let balanceCents = toCents(amount);
     const rows = [];
-    let balance = loanAmount;
-    let totalPaymentSum = 0;
-    let totalInterestSum = 0;
-    let totalPrincipalSum = 0;
-    let totalExtraSum = 0;
-    let factTotalPayment = 0;
-    let factTotalInterest = 0;
-    let factTotalPrincipal = 0;
-    let paidMonthsCount = 0;
+    let totalPaymentCents = 0;
+    let totalInterestCents = 0;
+    let totalPrincipalCents = 0;
+    let totalExtraCents = 0;
 
-    for (let i = 0; i < N; i++) {
-        const remainingMonths = N - i;
-        const balanceBefore = balance;
-        const interest = balance * monthlyRate;
-        const scheduledPrincipal = remainingMonths > 0 ? balance / remainingMonths : 0;
-        const scheduledPayment = interest + scheduledPrincipal;
-        let extra = extras[i] || 0;
-        if (extra < 0) extra = 0;
-        const maxExtra = Math.max(0, balance - scheduledPrincipal);
-        const extraApplied = Math.min(extra, maxExtra);
-        const totalPayment = scheduledPayment + extraApplied;
-        const totalPrincipal = scheduledPrincipal + extraApplied;
-        balance = balance - totalPrincipal;
-        balance = roundMoney(balance);
-        if (Math.abs(balance) < 0.005) balance = 0;
+    for (let i = 0; i < n; i++) {
+        const remainingMonths = n - i;
+        const balanceBeforeCents = balanceCents;
+        const interestCents = toCents(fromCents(balanceBeforeCents) * monthlyRate);
 
-        totalPaymentSum += totalPayment;
-        totalInterestSum += interest;
-        totalPrincipalSum += totalPrincipal;
-        totalExtraSum += extraApplied;
+        let scheduledPrincipalCents = remainingMonths <= 1
+            ? balanceCents
+            : Math.round(balanceCents / remainingMonths);
+        if (scheduledPrincipalCents > balanceCents) scheduledPrincipalCents = balanceCents;
+        if (scheduledPrincipalCents < 0) scheduledPrincipalCents = 0;
 
-        if (paidStatuses[i]) {
-            factTotalPayment += totalPayment;
-            factTotalInterest += interest;
-            factTotalPrincipal += totalPrincipal;
-            paidMonthsCount++;
-        }
+        const extraCents = Math.max(0, toCents(extrasList[i] || 0));
+        const maxExtraCents = Math.max(0, balanceCents - scheduledPrincipalCents);
+        const extraAppliedCents = Math.min(extraCents, maxExtraCents);
+
+        const scheduledPaymentCents = interestCents + scheduledPrincipalCents;
+        const totalPrincipalMonthCents = scheduledPrincipalCents + extraAppliedCents;
+        const totalPaymentMonthCents = interestCents + totalPrincipalMonthCents;
+        balanceCents -= totalPrincipalMonthCents;
+
+        totalPaymentCents += totalPaymentMonthCents;
+        totalInterestCents += interestCents;
+        totalPrincipalCents += totalPrincipalMonthCents;
+        totalExtraCents += extraAppliedCents;
 
         rows.push({
             index: i,
-            label: formatMonthLabel(startDate, i),
-            paymentDate: paymentDates[i] || '',
-            balanceBefore,
-            interest,
-            scheduledPrincipal,
-            scheduledPayment,
-            extra,
-            extraApplied,
-            maxExtra,
-            maxPayment: interest + balanceBefore,
-            totalPayment,
-            totalPrincipal,
-            balanceAfter: balance,
-            paid: !!paidStatuses[i]
+            balanceBefore: fromCents(balanceBeforeCents),
+            interest: fromCents(interestCents),
+            scheduledPrincipal: fromCents(scheduledPrincipalCents),
+            scheduledPayment: fromCents(scheduledPaymentCents),
+            extra: fromCents(extraCents),
+            extraApplied: fromCents(extraAppliedCents),
+            maxExtra: fromCents(maxExtraCents),
+            maxPayment: fromCents(interestCents + balanceBeforeCents),
+            totalPayment: fromCents(totalPaymentMonthCents),
+            totalPrincipal: fromCents(totalPrincipalMonthCents),
+            balanceAfter: fromCents(balanceCents)
         });
     }
 
     return {
         rows,
+        totals: {
+            totalPayment: fromCents(totalPaymentCents),
+            totalInterest: fromCents(totalInterestCents),
+            totalPrincipal: fromCents(totalPrincipalCents),
+            totalExtra: fromCents(totalExtraCents)
+        }
+    };
+}
+
+function computeSchedule() {
+    monthlyRate = annualRate / 100 / 12;
+    const plan = amortizeLoan(loanAmount, N, annualRate, []);
+    const adjusted = amortizeLoan(loanAmount, N, annualRate, extras);
+
+    let factPaymentCents = 0;
+    let factInterestCents = 0;
+    let factPrincipalCents = 0;
+    let paidMonthsCount = 0;
+
+    const rows = adjusted.rows.map((row, i) => {
+        const paid = !!paidStatuses[i];
+        if (paid) {
+            factPaymentCents += toCents(row.totalPayment);
+            factInterestCents += toCents(row.interest);
+            factPrincipalCents += toCents(row.totalPrincipal);
+            paidMonthsCount++;
+        }
+        return {
+            ...row,
+            label: formatMonthLabel(startDate, i),
+            paymentDate: paymentDates[i] || '',
+            paid
+        };
+    });
+
+    return {
+        rows,
         currentIndex: getCurrentMonthIndex(startDate),
         totals: {
-            totalPaymentSum,
-            totalInterestSum,
-            totalPrincipalSum,
-            totalExtraSum,
-            factTotalPayment,
-            factTotalInterest,
-            factTotalPrincipal,
+            totalPaymentSum: plan.totals.totalPayment,
+            totalInterestSum: plan.totals.totalInterest,
+            totalPrincipalSum: plan.totals.totalPrincipal,
+            firstPayment: plan.rows[0] ? plan.rows[0].scheduledPayment : 0,
+            adjTotalPayment: adjusted.totals.totalPayment,
+            adjTotalInterest: adjusted.totals.totalInterest,
+            adjTotalPrincipal: adjusted.totals.totalPrincipal,
+            totalExtraSum: adjusted.totals.totalExtra,
+            interestSaved: fromCents(toCents(plan.totals.totalInterest) - toCents(adjusted.totals.totalInterest)),
+            factTotalPayment: fromCents(factPaymentCents),
+            factTotalInterest: fromCents(factInterestCents),
+            factTotalPrincipal: fromCents(factPrincipalCents),
             paidMonthsCount
         }
     };
@@ -402,7 +443,18 @@ function renderSummary(schedule) {
     document.getElementById('sum-total-payment').textContent = formatMoney(t.totalPaymentSum);
     document.getElementById('sum-total-interest').textContent = formatMoney(t.totalInterestSum);
     document.getElementById('sum-total-principal').textContent = formatMoney(t.totalPrincipalSum);
-    document.getElementById('sum-total-extra').textContent = formatMoney(t.totalExtraSum);
+    document.getElementById('sum-first-payment').textContent = formatMoney(t.firstPayment);
+
+    const adjustGroup = document.getElementById('summary-group-adjust');
+    const hasExtras = t.totalExtraSum > 0;
+    if (adjustGroup) adjustGroup.hidden = !hasExtras;
+    if (hasExtras) {
+        document.getElementById('adj-total-payment').textContent = formatMoney(t.adjTotalPayment);
+        document.getElementById('adj-total-interest').textContent = formatMoney(t.adjTotalInterest);
+        document.getElementById('adj-interest-saved').textContent = formatMoney(t.interestSaved);
+        document.getElementById('sum-total-extra').textContent = formatMoney(t.totalExtraSum);
+    }
+
     document.getElementById('fact-total-payment').textContent = formatMoney(t.factTotalPayment);
     document.getElementById('fact-total-interest').textContent = formatMoney(t.factTotalInterest);
     document.getElementById('fact-total-principal').textContent = formatMoney(t.factTotalPrincipal);
@@ -502,7 +554,7 @@ function commitExtraFromInput(idx, input, { emptyToZero = false } = {}) {
     }
     const val = parseNonNegNumber(raw);
     if (val === null) return false;
-    extras[idx] = val;
+    extras[idx] = roundMoney(val);
     applyExtraDateSideEffect(idx);
     return true;
 }
@@ -516,8 +568,8 @@ function commitAmount({ emptyToZero = false } = {}) {
     }
     const n = parseNonNegNumber(raw);
     if (n === null) return false;
-    loanAmount = n;
-    lastValidAmount = n;
+    loanAmount = roundMoney(n);
+    lastValidAmount = loanAmount;
     return true;
 }
 
