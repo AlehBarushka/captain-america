@@ -438,27 +438,32 @@ function renderCards(schedule) {
     });
 }
 
+function setTextById(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+}
+
 function renderSummary(schedule) {
     const t = schedule.totals;
-    document.getElementById('sum-total-payment').textContent = formatMoney(t.totalPaymentSum);
-    document.getElementById('sum-total-interest').textContent = formatMoney(t.totalInterestSum);
-    document.getElementById('sum-total-principal').textContent = formatMoney(t.totalPrincipalSum);
-    document.getElementById('sum-first-payment').textContent = formatMoney(t.firstPayment);
+    setTextById('sum-total-payment', formatMoney(t.totalPaymentSum));
+    setTextById('sum-total-interest', formatMoney(t.totalInterestSum));
+    setTextById('sum-total-principal', formatMoney(t.totalPrincipalSum));
+    setTextById('sum-first-payment', formatMoney(t.firstPayment));
 
     const adjustGroup = document.getElementById('summary-group-adjust');
     const hasExtras = t.totalExtraSum > 0;
     if (adjustGroup) adjustGroup.hidden = !hasExtras;
     if (hasExtras) {
-        document.getElementById('adj-total-payment').textContent = formatMoney(t.adjTotalPayment);
-        document.getElementById('adj-total-interest').textContent = formatMoney(t.adjTotalInterest);
-        document.getElementById('adj-interest-saved').textContent = formatMoney(t.interestSaved);
-        document.getElementById('sum-total-extra').textContent = formatMoney(t.totalExtraSum);
+        setTextById('adj-total-payment', formatMoney(t.adjTotalPayment));
+        setTextById('adj-total-interest', formatMoney(t.adjTotalInterest));
+        setTextById('adj-interest-saved', formatMoney(t.interestSaved));
+        setTextById('sum-total-extra', formatMoney(t.totalExtraSum));
     }
 
-    document.getElementById('fact-total-payment').textContent = formatMoney(t.factTotalPayment);
-    document.getElementById('fact-total-interest').textContent = formatMoney(t.factTotalInterest);
-    document.getElementById('fact-total-principal').textContent = formatMoney(t.factTotalPrincipal);
-    document.getElementById('paid-months-count').textContent = t.paidMonthsCount;
+    setTextById('fact-total-payment', formatMoney(t.factTotalPayment));
+    setTextById('fact-total-interest', formatMoney(t.factTotalInterest));
+    setTextById('fact-total-principal', formatMoney(t.factTotalPrincipal));
+    setTextById('paid-months-count', t.paidMonthsCount);
 }
 
 function renderPayCard(schedule) {
