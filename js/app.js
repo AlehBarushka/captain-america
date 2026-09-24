@@ -296,11 +296,19 @@ function amortizeLoan(amount, n, ratePercent, extrasList) {
     for (let i = 0; i < n; i++) {
         const remainingMonths = n - i;
         const balanceBeforeCents = balanceCents;
-        const interestCents = toCents(fromCents(balanceBeforeCents) * monthlyRate);
+        const balanceRubles = fromCents(balanceBeforeCents);
+        const interestCents = toCents(balanceRubles * monthlyRate);
 
-        let scheduledPrincipalCents = remainingMonths <= 1
-            ? balanceCents
-            : Math.round(balanceCents / remainingMonths);
+        // Первые 12 месяцев — только проценты. Срок не растёт: с 13-го месяца
+        // остаток делится на оставшиеся месяцы. Последний месяц срока закрывает остаток.
+        let scheduledPrincipalCents;
+        if (i < 12 && remainingMonths > 1) {
+            scheduledPrincipalCents = 0;
+        } else if (remainingMonths <= 1) {
+            scheduledPrincipalCents = balanceCents;
+        } else {
+            scheduledPrincipalCents = toCents(balanceRubles / remainingMonths);
+        }
         if (scheduledPrincipalCents > balanceCents) scheduledPrincipalCents = balanceCents;
         if (scheduledPrincipalCents < 0) scheduledPrincipalCents = 0;
 
