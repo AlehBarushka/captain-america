@@ -123,7 +123,7 @@ function accrualDays(contractDateStr, index) {
     const accrual = new Date(start.getFullYear(), start.getMonth() + index, 1);
     const dim = daysInMonth(accrual.getFullYear(), accrual.getMonth());
     if (index === 0) return Math.max(0, dim - start.getDate());
-    return dim;
+    return 30;
 }
 
 function formatMonthLabel(startDateStr, index) {
@@ -195,8 +195,8 @@ function setActiveScreen(name) {
 }
 
 // ---------- Построение таблицы и карточек ----------
-function extraInputValue(value) {
-    return value ? String(value) : '0';
+function paidInputValue(scheduledPayment, extra) {
+    return String(roundMoney((scheduledPayment || 0) + (extra || 0)));
 }
 
 function buildTable() {
@@ -213,7 +213,7 @@ function buildTable() {
             <td class="col-group-2 interest col-interest"></td>
             <td class="col-group-2 principal-plan col-principal-plan"></td>
             <td class="col-group-2 payment-plan col-payment-plan"></td>
-            <td class="col-group-extra"><input type="number" class="extra-input" data-month="${i}" min="0" step="any" inputmode="decimal" value="${extraInputValue(extras[i])}"></td>
+            <td class="col-group-extra"><input type="number" class="extra-input" data-month="${i}" min="0" step="any" inputmode="decimal" value="0"></td>
             <td class="col-group-3 total-payment"></td>
             <td class="col-group-3 total-principal col-total-principal"></td>
             <td class="col-group-balance balance-after"></td>
@@ -251,8 +251,8 @@ function buildCards() {
                     <span>Дата оплаты: <strong class="det-payment-date"></strong></span>
                 </div>
                 <div class="month-card-actions">
-                    <label>Доп. платёж
-                        <input type="number" class="extra-input" data-month="${i}" min="0" step="any" inputmode="decimal" value="${extraInputValue(extras[i])}">
+                    <label>Внесено
+                        <input type="number" class="extra-input" data-month="${i}" min="0" step="any" inputmode="decimal" value="0">
                     </label>
                     <label>
                         <input type="checkbox" class="paid-checkbox" data-month="${i}" ${paidStatuses[i] ? 'checked' : ''}>
@@ -427,7 +427,7 @@ function renderTable(schedule) {
         cells[7].textContent = formatMoney(row.totalPayment);
         cells[8].textContent = formatMoney(row.totalPrincipal);
         cells[9].textContent = formatMoney(row.balanceAfter);
-        setInputValueIfUnfocused(tr.querySelector('.extra-input'), extraInputValue(extras[i] || 0));
+        setInputValueIfUnfocused(tr.querySelector('.extra-input'), paidInputValue(row.scheduledPayment, extras[i] || 0));
         const checkbox = tr.querySelector('.paid-checkbox');
         if (checkbox) checkbox.checked = row.paid;
         tr.classList.toggle('paid', row.paid);
@@ -449,7 +449,7 @@ function renderCards(schedule) {
         card.querySelector('.det-interest').textContent = formatMoney(row.interest);
         card.querySelector('.det-principal-plan').textContent = formatMoney(row.scheduledPrincipal);
         card.querySelector('.det-payment-date').textContent = row.paymentDate || '—';
-        setInputValueIfUnfocused(card.querySelector('.extra-input'), extraInputValue(extras[i] || 0));
+        setInputValueIfUnfocused(card.querySelector('.extra-input'), paidInputValue(row.scheduledPayment, extras[i] || 0));
         const checkbox = card.querySelector('.paid-checkbox');
         if (checkbox) checkbox.checked = row.paid;
         card.classList.toggle('paid', row.paid);
@@ -569,17 +569,34 @@ function applyExtraDateSideEffect(idx) {
 }
 
 function commitExtraFromInput(idx, input, { emptyToZero = false } = {}) {
+    const row = computeSchedule().rows[idx];
+    if (!row) return false;
+    const min = roundMoney(row.scheduledPayment);
+    const max = roundMoney(row.maxPayment);
+    const restorePaid = () => {
+        input.value = paidInputValue(min, extras[idx] || 0);
+    };
+
     const raw = input.value;
     if (raw === '') {
         if (!emptyToZero) return false;
         extras[idx] = 0;
-        input.value = '0';
+        restorePaid();
         applyExtraDateSideEffect(idx);
         return true;
     }
     const val = parseNonNegNumber(raw);
-    if (val === null) return false;
-    extras[idx] = roundMoney(val);
+    if (val === null) {
+        if (emptyToZero) restorePaid();
+        return false;
+    }
+    const value = roundMoney(val);
+    if (value < min || value > max) {
+        if (emptyToZero) restorePaid();
+        return false;
+    }
+    extras[idx] = roundMoney(value - min);
+    if (emptyToZero) restorePaid();
     applyExtraDateSideEffect(idx);
     return true;
 }
