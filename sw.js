@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v8';
+const CACHE_VERSION = 'v9';
 const CACHE_NAME = 'ipoteka-schedule-' + CACHE_VERSION;
 
 const PRECACHE_URLS = [

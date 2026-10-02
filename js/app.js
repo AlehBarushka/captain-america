@@ -126,6 +126,97 @@ function accrualDays(contractDateStr, index) {
     return 30;
 }
 
+function accrualPeriod(contractDateStr, index) {
+    const start = parseISODate(contractDateStr);
+    const monthDate = new Date(start.getFullYear(), start.getMonth() + index, 1);
+    if (index === 0) {
+        return {
+            start: new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1),
+            end: new Date(start.getFullYear(), start.getMonth() + 1, 0),
+            days: accrualDays(contractDateStr, index),
+            bank30: false
+        };
+    }
+    return {
+        start: monthDate,
+        end: new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0),
+        days: 30,
+        bank30: true
+    };
+}
+
+function parsePaymentDate(value) {
+    const text = String(value || '').trim();
+    if (!text) return null;
+    let y;
+    let m;
+    let d;
+    const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const ru = text.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    if (iso) {
+        y = Number(iso[1]);
+        m = Number(iso[2]);
+        d = Number(iso[3]);
+    } else if (ru) {
+        d = Number(ru[1]);
+        m = Number(ru[2]);
+        y = Number(ru[3]);
+    } else {
+        return null;
+    }
+    const date = new Date(y, m - 1, d);
+    if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null;
+    return date;
+}
+
+function addDays(date, days) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+}
+
+function calendarDayOffset(fromDate, toDate) {
+    const a = Date.UTC(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+    const b = Date.UTC(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+    return Math.round((b - a) / 86400000);
+}
+
+// Сколько банковских дней периода прошло до date (date — первый день нового остатка).
+function bankOffset(period, date) {
+    if (!period.bank30) {
+        if (calendarDayOffset(period.end, date) > 0) return period.days;
+        return Math.max(0, calendarDayOffset(period.start, date));
+    }
+    const py = period.start.getFullYear();
+    const pm = period.start.getMonth();
+    const dy = date.getFullYear();
+    const dm = date.getMonth();
+    if (dy < py || (dy === py && dm < pm)) return 0;
+    if (dy > py || (dy === py && dm > pm)) return period.days;
+    return Math.min(date.getDate(), 30) - 1;
+}
+
+function reductionEffectiveDate(contractDate, paidIndex, paymentDateStr) {
+    const paidOn = parsePaymentDate(paymentDateStr);
+    if (paidOn) return addDays(paidOn, 1);
+    return accrualPeriod(contractDate, paidIndex + 1).start;
+}
+
+function interestCentsForPeriod(openingCents, periodDays, cuts, ratePercent) {
+    let cursor = 0;
+    let balanceCents = openingCents;
+    let weighted = 0;
+    for (let i = 0; i < cuts.length; i++) {
+        const at = cuts[i].offset;
+        if (at > cursor) {
+            weighted += fromCents(balanceCents) * (at - cursor);
+            cursor = at;
+        }
+        balanceCents -= cuts[i].cents;
+        if (balanceCents < 0) balanceCents = 0;
+    }
+    if (periodDays > cursor) weighted += fromCents(balanceCents) * (periodDays - cursor);
+    return toCents(weighted * (ratePercent / 100) / BANK_YEAR_DAYS);
+}
+
 function formatMonthLabel(startDateStr, index) {
     const start = parseISODate(startDateStr);
     const d = new Date(start.getFullYear(), start.getMonth() + 1 + index, 1);
@@ -297,9 +388,11 @@ function syncHorizon() {
 }
 
 // ---------- Расчёт графика ----------
-function amortizeLoan(amount, n, ratePercent, extrasList, contractDate) {
+function amortizeLoan(amount, n, ratePercent, extrasList, contractDate, paymentDateList) {
+    const dates = paymentDateList || [];
     let balanceCents = toCents(amount);
     const rows = [];
+    const reductions = [];
     let totalPaymentCents = 0;
     let totalInterestCents = 0;
     let totalPrincipalCents = 0;
@@ -309,8 +402,23 @@ function amortizeLoan(amount, n, ratePercent, extrasList, contractDate) {
         const remainingMonths = n - i;
         const balanceBeforeCents = balanceCents;
         const balanceRubles = fromCents(balanceBeforeCents);
-        const days = accrualDays(contractDate, i);
-        const interestCents = toCents(balanceRubles * (ratePercent / 100) * days / BANK_YEAR_DAYS);
+        const period = accrualPeriod(contractDate, i);
+
+        // Погашение тела действует со следующего дня после даты оплаты.
+        // Если эта дата внутри периода, проценты до неё — по старому остатку.
+        let openingCents = balanceBeforeCents;
+        const cuts = [];
+        for (let r = 0; r < reductions.length; r++) {
+            const offset = bankOffset(period, reductions[r].effective);
+            if (offset >= period.days) {
+                openingCents += reductions[r].cents;
+            } else if (offset > 0) {
+                openingCents += reductions[r].cents;
+                cuts.push({ offset, cents: reductions[r].cents });
+            }
+        }
+        cuts.sort((a, b) => a.offset - b.offset);
+        const interestCents = interestCentsForPeriod(openingCents, period.days, cuts, ratePercent);
 
         // Первые 12 месяцев — только проценты. Срок не растёт: с 13-го месяца
         // остаток делится на оставшиеся месяцы. Последний месяц срока закрывает остаток.
@@ -332,6 +440,12 @@ function amortizeLoan(amount, n, ratePercent, extrasList, contractDate) {
         const scheduledPaymentCents = interestCents + scheduledPrincipalCents;
         const totalPrincipalMonthCents = scheduledPrincipalCents + extraAppliedCents;
         const totalPaymentMonthCents = interestCents + totalPrincipalMonthCents;
+        if (totalPrincipalMonthCents > 0) {
+            reductions.push({
+                effective: reductionEffectiveDate(contractDate, i, dates[i]),
+                cents: totalPrincipalMonthCents
+            });
+        }
         balanceCents -= totalPrincipalMonthCents;
 
         totalPaymentCents += totalPaymentMonthCents;
@@ -368,7 +482,7 @@ function amortizeLoan(amount, n, ratePercent, extrasList, contractDate) {
 
 function computeSchedule() {
     const plan = amortizeLoan(loanAmount, N, annualRate, [], startDate);
-    const adjusted = amortizeLoan(loanAmount, N, annualRate, extras, startDate);
+    const adjusted = amortizeLoan(loanAmount, N, annualRate, extras, startDate, paymentDates);
 
     let factPaymentCents = 0;
     let factInterestCents = 0;
