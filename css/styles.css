@@ -70,6 +70,7 @@ h1 {
     justify-content: center;
     align-items: center;
     min-height: calc(100vh - 2rem);
+    min-height: calc(100dvh - 2rem);
 }
 
 [hidden] {
@@ -609,7 +610,11 @@ th.col-group-date { background-color: #f8bbd0; }
     h1 { font-size: 1.3rem; margin-bottom: 0.25rem; }
     .subtitle { font-size: 0.85rem; margin-bottom: 1rem; }
 
-    .login-screen { min-height: calc(100vh - 1rem); }
+    .login-screen {
+        min-height: calc(100vh - 1rem);
+        min-height: calc(100dvh - 1rem);
+    }
+    .extra-input { font-size: 16px; width: 8.5rem; padding: 0.4rem 0.5rem; }
     .login-card { padding: 1rem; border-radius: 12px; }
     .btn-primary { font-size: 16px; }
     .app-header { flex-direction: column; align-items: stretch; }

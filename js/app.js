@@ -191,7 +191,7 @@ function bankOffset(period, date) {
     const dm = date.getMonth();
     if (dy < py || (dy === py && dm < pm)) return 0;
     if (dy > py || (dy === py && dm > pm)) return period.days;
-    return Math.min(date.getDate(), 30) - 1;
+    return Math.min(date.getDate() - 1, period.days);
 }
 
 function reductionEffectiveDate(contractDate, paidIndex, paymentDateStr) {
@@ -482,7 +482,9 @@ function amortizeLoan(amount, n, ratePercent, extrasList, contractDate, paymentD
 
 function computeSchedule() {
     const plan = amortizeLoan(loanAmount, N, annualRate, [], startDate);
-    const adjusted = amortizeLoan(loanAmount, N, annualRate, extras, startDate, paymentDates);
+    const appliedExtras = extras.map((value, i) => (paidStatuses[i] ? value : 0));
+    const appliedDates = paymentDates.map((value, i) => (paidStatuses[i] ? value : ''));
+    const adjusted = amortizeLoan(loanAmount, N, annualRate, appliedExtras, startDate, appliedDates);
 
     let factPaymentCents = 0;
     let factInterestCents = 0;
@@ -500,7 +502,7 @@ function computeSchedule() {
         return {
             ...row,
             label: formatMonthLabel(startDate, i),
-            paymentDate: paymentDates[i] || '',
+            paymentDate: paid ? paymentDates[i] || '' : '',
             paid
         };
     });
@@ -675,7 +677,7 @@ async function saveToFirebase() {
 }
 
 function applyExtraDateSideEffect(idx) {
-    if (extras[idx] > 0 && !paymentDates[idx]) {
+    if (paidStatuses[idx] && extras[idx] > 0 && !paymentDates[idx]) {
         paymentDates[idx] = formatDate(new Date());
     } else if (extras[idx] === 0 && !paidStatuses[idx]) {
         paymentDates[idx] = '';
